@@ -1,4 +1,6 @@
 import pyxel
+import pyaudio
+import numpy as np
 
 class Main:
 
@@ -6,6 +8,11 @@ class Main:
 
 		pyxel.init(160, 160, caption="Meut")
 		pyxel.load("my_resource.pyxres")
+
+		self.screen = 0
+		# 0 : home, 1 : game
+
+		self.started = False
 
 		self.move = 0
 		# 0 : left, 1 : right
@@ -15,7 +22,31 @@ class Main:
 		self.curr_dir = 0
 		#0 : down, 1 : left, 2 : up, 3 : right
 
+		self.audio_obj = None
+		self.audio_stream = None
+
 		pyxel.run(self.update, self.draw)
+
+	def home_screen(self):
+		pyxel.blt(42,40,0,0,80,72,32)
+
+		pyxel.blt(42,100,0,0,112,72,16)
+
+	def start(self):
+		if pyxel.btn(pyxel.MOUSE_LEFT_BUTTON) and (pyxel.pget(pyxel.mouse_x, pyxel.mouse_y) == 13 or pyxel.pget(pyxel.mouse_x, pyxel.mouse_y) == 6):
+			self.screen = 1
+			self.started = True
+	    	pyxel.mouse(False)
+
+	def init_audio(self):
+		self.audio_obj = pyaudio.PyAudio()
+		self.audio_stream = self.audio_obj.open(format=pyaudio.paInt16,channels=1,rate=3000,input=True,frames_per_buffer=1024)
+
+	def listen(self):
+		data = np.fromstring(self.audio_stream.read(1024),dtype=np.int16)
+
+		if max(data) > 500:
+			print("trigger")
 
 	def move_btn(self):
 		if pyxel.btn(pyxel.KEY_W):
@@ -85,11 +116,22 @@ class Main:
 	    if pyxel.btnp(pyxel.KEY_Q):
 	        pyxel.quit()
 
-	    self.move_btn()
+	    if self.screen == 0:
+	    	self.start()
+	    else:
+	    	if self.started:
+	    		self.init_audio();
+	    		self.started = False
+		    self.move_btn()
+		    self.listen()
 
 	def draw(self):
 	    pyxel.cls(0)
 
-	    self.char_model()
+	    if self.screen == 0:
+	    	pyxel.mouse(True)
+	    	self.home_screen();
+	    else:
+	    	self.char_model()
 
 Main()
