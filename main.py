@@ -3,6 +3,8 @@ import pyaudio
 import numpy as np
 import random
 from threading import Thread
+import math
+import time
 
 tmap = []
 
@@ -45,6 +47,9 @@ def map_init():
 
 map_init()
 
+def dist(x1, y1, x2, y2):
+	return math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1))
+
 class Monster:
 
 	def __init__(self, x_loc, y_loc):
@@ -53,10 +58,12 @@ class Monster:
 		self.y = y_loc
 
 		self.active = False
-		self.active_timer = 90
 
 		self.target_loc_x = 0
 		self.target_loc_y = 0
+		self.target_latest = 0
+
+		self.path = []
 
 		self.eye_dir = 0
 
@@ -67,7 +74,19 @@ class Monster:
 			self.wander()
 
 	def move_to_target(self):
-		pass
+		if len(self.path) > 0:
+			if self.path[0] == 0:
+				self.x += 1
+			elif self.path[0] == 1:
+				self.y += 1
+			elif self.path[0] == 2:
+				self.x -= 1
+			else:
+				self.y -= 1
+
+			del self.path[0]
+		else:
+			self.active = False
 
 	def wander(self):
 		all_adj = [[self.x + 1, self.y], [self.x, self.y + 1], [self.x - 1, self.y], [self.x, self.y - 1]]
@@ -83,23 +102,59 @@ class Monster:
 			self.x = next_pos[0]
 			self.y = next_pos[1]
 
+	def calc_path(self):
+		futures = {(self.x,self.y,dist(self.x, self.y, self.target_loc_x, self.target_loc_y)):[]}
+		visited = set()
+
+		while futures:
+			min_key = list(futures.keys())[0]
+			min_dist = list(futures.keys())[0][2] + len(futures[list(futures.keys())[0]])
+			for t in futures:
+				if min_dist > t[2] + len(futures[t]):
+					min_key = t
+					min_dist = t[2] + len(futures[t])
+
+			if min_key[0] == self.target_loc_x and min_key[1] == self.target_loc_y:
+				return futures[min_key]
+
+			curr_path = futures[min_key]
+			currx = min_key[0]
+			curry = min_key[1]
+
+			del futures[min_key]
+			visited.add((min_key[0], min_key[1]))
+
+			all_adj = {0:(currx + 1, curry), 1:(currx, curry + 1), 2:(currx - 1, curry), 3:(currx, curry - 1)}
+			poss_pos = {}
+			for i in all_adj:
+				if not tmap[all_adj[i][0]][all_adj[i][1]] and all_adj[i] not in visited:
+					poss_pos[i] = all_adj[i]
+
+			if not bool(poss_pos):
+				continue
+
+			for poss in poss_pos:
+				futures[(poss_pos[poss][0],poss_pos[poss][1],dist(poss_pos[poss][0],poss_pos[poss][1],self.target_loc_x,self.target_loc_y))] = curr_path + [poss]
+
+		return []
+
 	def trigger(self, target_x, target_y):
 		self.target_loc_x = target_x
 		self.target_loc_y = target_y
 		self.active = True
-		self.active = 90
 
-	def timer_count(self):
-		self.active_timer -= 1
-		if self.active_timer == 0:
-			self.active = False
+		self.path = self.calc_path()
 
 	def randomize_eye(self):
 		self.eye_dir = random.randint(0,3)
 
 	def tick(self, frame_counter):
-		if frame_counter == 0:
+		if frame_counter == 0 and not self.active:
+			self.wander()
+		elif frame_counter % 5 == 0 and self.active:
 			self.move()
+
+		if frame_counter % 30 == 0:
 			self.randomize_eye()
 
 class Main:
@@ -147,12 +202,12 @@ class Main:
 		pyxel.run(self.update, self.draw)
 
 	# def home_screen(self):
-	# 	pyxel.blt(42,40,0,0,80,64,32)
+	# 	pyxel.blt(38,40,0,0,80,64,32)
 
-	# 	pyxel.blt(42,100,0,0,112,64,16)
+	# 	pyxel.blt(36,100,0,0,112,80,16)
 
 	# def start(self):
-	# 	if pyxel.btn(pyxel.MOUSE_LEFT_BUTTON) and (pyxel.pget(pyxel.mouse_x, pyxel.mouse_y) == 13 or pyxel.pget(pyxel.mouse_x, pyxel.mouse_y) == 6):
+	# 	if pyxel.btnp(pyxel.MOUSE_LEFT_BUTTON) and (pyxel.pget(pyxel.mouse_x, pyxel.mouse_y) == 13 or pyxel.pget(pyxel.mouse_x, pyxel.mouse_y) == 6):
 	# 		self.screen = 1
 	# 		pyxel.mouse(False)
 
@@ -173,18 +228,31 @@ class Main:
 			self.monsters.append(Monster(poss_spawns[l][0], poss_spawns[l][1]))
 			del poss_spawns[l]
 
-		self.monsters.append(Monster(50,50))
-
 	def display_monsters(self):
 		for m in self.monsters:
 			xdiff = m.x - self.player_x
 			ydiff = m.y - self.player_y
 			if xdiff < 5 and ydiff < 5:
-				pyxel.blt(64 + xdiff * 16, 64 + ydiff * 16,0,m.eye_dir * 16, 128, 16, 16)
+				if not m.active:
+					pyxel.blt(64 + xdiff * 16, 64 + ydiff * 16,0,m.eye_dir * 16, 128, 16, 16)
+				else:
+					pyxel.blt(64 + xdiff * 16, 64 + ydiff * 16,0,m.eye_dir * 16, 144, 16, 16)
+
+	def check_lose(self):
+		for m in self.monsters:
+			if m.x == self.player_x and m.y == self.player_y:
+				return True
 
 	def run_monsters(self):
 		for m in self.monsters:
-			m.tick(self.frame)
+			if m.x - self.player_x < 30 or m.y - self.player_y < 30 or m.active:
+				m.tick(self.frame)
+
+				for p in self.ping_list:
+					ping_dist = dist(m.x, m.y, self.ping_list[p][1], self.ping_list[p][2])
+					if ping_dist < (self.ping_list[p][0] / 4800) and m.target_latest < self.ping_list[p][3]:
+						m.trigger(self.ping_list[p][1],self.ping_list[p][2])
+						m.target_latest = self.ping_list[p][3]
 
 	def listen(self):
 		while not self.quit:
@@ -197,12 +265,12 @@ class Main:
 
 	def count_frame(self):
 		self.frame += 1
-		self.frame %= 15
+		self.frame %= 60
 
 	def ping(self):
 		if self.made_noise:
 			self.made_noise = False
-			self.ping_list[self.noise_amt] = [0, self.player_x, self.player_y]
+			self.ping_list[self.noise_amt] = [0, self.player_x, self.player_y, time.time()]
 
 		for x in self.ping_list:
 			pyxel.circb(72 + 16 * (self.ping_list[x][1] - self.player_x), 72 + 16 * (self.ping_list[x][2] - self.player_y),self.ping_list[x][0]/300,13)
@@ -316,8 +384,7 @@ class Main:
 		pyxel.tri(144,144,88,144,144,50,0)
 
 	def update(self):
-		global monster_tick
-		if pyxel.btnp(pyxel.KEY_Q):
+		if pyxel.btnp(pyxel.KEY_Q) or self.check_lose():
 			self.quit = True
 
 			self.audio_thread.join()
@@ -335,12 +402,12 @@ class Main:
 		self.run_monsters()
 
 	def draw(self):
-	    pyxel.cls(0)
+		pyxel.cls(0)
 
-	    self.display_map()
-	    self.char_model()
-	    self.display_monsters()
-	    self.ping()
-	    self.isolate_view()
+		self.display_map()
+		self.char_model()
+		self.display_monsters()
+		self.ping()
+		self.isolate_view()
 
 Main()
