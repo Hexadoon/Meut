@@ -58,6 +58,7 @@ class Monster:
 		self.y = y_loc
 
 		self.active = False
+		self.active_timer = 12
 
 		self.target_loc_x = 0
 		self.target_loc_y = 0
@@ -66,12 +67,6 @@ class Monster:
 		self.path = []
 
 		self.eye_dir = 0
-
-	def move(self):
-		if self.active:
-			self.move_to_target()
-		else:
-			self.wander()
 
 	def move_to_target(self):
 		if len(self.path) > 0:
@@ -85,6 +80,9 @@ class Monster:
 				self.y -= 1
 
 			del self.path[0]
+		elif self.active_timer > 0:
+			self.wander()
+			self.active_timer -= 1
 		else:
 			self.active = False
 
@@ -142,6 +140,7 @@ class Monster:
 		self.target_loc_x = target_x
 		self.target_loc_y = target_y
 		self.active = True
+		self.active_timer = 12
 
 		self.path = self.calc_path()
 
@@ -152,7 +151,7 @@ class Monster:
 		if frame_counter == 0 and not self.active:
 			self.wander()
 		elif frame_counter % 5 == 0 and self.active:
-			self.move()
+			self.move_to_target()
 
 		if frame_counter % 30 == 0:
 			self.randomize_eye()
