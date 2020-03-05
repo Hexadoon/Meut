@@ -5,29 +5,39 @@ import random
 from threading import Thread
 import math
 import time
+from playsound import playsound
 
 tmap = []
 
+level = 1
+map_size = 100 * level
+
+exit = (0,0)
+
 def map_init():
 	global tmap
-	tmap = [[False for j in range(100)] for i in range(100)]
+	global exit
 
-	for i in range(100):
+	map_size = 100 * level
+
+	tmap = [[False for j in range(map_size)] for i in range(map_size)]
+
+	for i in range(map_size):
 		tmap[0][i] = True
 		tmap[i][0] = True
-		tmap[99][i] = True
-		tmap[i][99] = True
+		tmap[map_size - 1][i] = True
+		tmap[i][map_size - 1] = True
 
-	for i in range(98):
-		for j in range(98):
+	for i in range(map_size - 2):
+		for j in range(map_size - 2):
 
 			l = [tmap[i+1][j],tmap[i][j],tmap[i][j+1]]
 			l = [0 for x in l if x]
 			if len(l) <= 2 and random.random() > 0.7:
 				tmap[i+1][j+1] = True
 
-	for i in range(96):
-		for j in range(96):
+	for i in range(map_size - 4):
+		for j in range(map_size - 4):
 			if not tmap[i+2][j+2] and \
 			tmap[i+1][j+2] and \
 			tmap[i+2][j+1] and \
@@ -43,7 +53,31 @@ def map_init():
 				else:
 					tmap[i+2][j+3] = False
 
-	tmap[50][50] = False
+	visitable = set()
+	nextposs = {(int(map_size / 2),int(map_size / 2))}
+
+	while len(nextposs) > 0:
+		currpos = next(iter(nextposs))
+		nextposs.remove(currpos)
+
+		possnext = [(currpos[0] + 1, currpos[1]), (currpos[0] - 1, currpos[1]), (currpos[0], currpos[1] + 1), (currpos[0], currpos[1] - 1)]
+		for p in possnext:
+			if not tmap[p[0]][p[1]] and p not in visitable and p not in nextposs:
+				nextposs.add(p)
+
+		visitable.add(currpos)
+
+	maxdist = 0
+	furthest = (map_size / 2,map_size / 2)
+	for pos in visitable:
+		if abs(pos[0] - map_size / 2) + abs(pos[1] - map_size / 2) > maxdist:
+			maxdist = abs(pos[0] - map_size / 2) + abs(pos[1] - map_size / 2)
+			furthest = pos
+
+	exit = furthest
+	print(exit)
+
+	tmap[int(map_size / 2)][int(map_size / 2)] = False
 
 map_init()
 
@@ -164,10 +198,10 @@ class Main:
 		pyxel.load("my_resource.pyxres")
 
 		self.screen = 0
-		# 0 : home, 1 : game
+		# 0 : home, 1 : game, 2: level
 
-		self.player_x = 50
-		self.player_y = 50
+		self.player_x = int(map_size / 2)
+		self.player_y = int(map_size / 2)
 
 		self.monsters = []
 
@@ -181,6 +215,7 @@ class Main:
 		self.moving = False
 
 		self.frame = 0
+		self.frame_diff = 0
 
 		self.made_noise = False
 		self.noise_amt = 0
@@ -200,21 +235,41 @@ class Main:
 
 		pyxel.run(self.update, self.draw)
 
-	# def home_screen(self):
-	# 	pyxel.blt(38,40,0,0,80,64,32)
+	def home_screen(self):
+		pyxel.blt(38,40,0,0,80,64,32)
 
-	# 	pyxel.blt(36,100,0,0,112,80,16)
+		pyxel.blt(36,100,0,0,112,80,16)
 
-	# def start(self):
-	# 	if pyxel.btnp(pyxel.MOUSE_LEFT_BUTTON) and (pyxel.pget(pyxel.mouse_x, pyxel.mouse_y) == 13 or pyxel.pget(pyxel.mouse_x, pyxel.mouse_y) == 6):
-	# 		self.screen = 1
-	# 		pyxel.mouse(False)
+	def start(self):
+		if pyxel.btnr(pyxel.MOUSE_LEFT_BUTTON) and (pyxel.pget(pyxel.mouse_x, pyxel.mouse_y) == 13 or pyxel.pget(pyxel.mouse_x, pyxel.mouse_y) == 6):
+			self.screen = 2
+			pyxel.mouse(False)
+
+	def lvl_screen(self):
+		self.frame_diff += 1
+		pyxel.cls(0)
+
+		global level
+		lvl_text = "Level " + str(level)
+
+		if self.frame_diff == 30:
+			playsound("assets/switch1.mp3")
+
+		if self.frame_diff == 90:
+			playsound("assets/switch2.mp3")
+
+		if self.frame_diff >= 30 and self.frame_diff <= 90:
+			pyxel.text(40,64,lvl_text,7)
+
+		if self.frame_diff >= 120:
+			self.screen = 1
+			self.frame_diff = 0
 
 	def monster_spawn(self):
 		global tmap
 		all_spawns = []
-		for x in range(98):
-			for y in range(98):
+		for x in range(map_size - 2):
+			for y in range(map_size - 2):
 				all_spawns.append([x + 1, y + 1])
 
 		poss_spawns = []
@@ -222,7 +277,7 @@ class Main:
 			if not tmap[l[0]][l[1]]:
 				poss_spawns.append(l)
 
-		for i in range(50):
+		for i in range(50 * level):
 			l = random.randint(0,len(poss_spawns) - 1)
 			self.monsters.append(Monster(poss_spawns[l][0], poss_spawns[l][1]))
 			del poss_spawns[l]
@@ -242,6 +297,13 @@ class Main:
 			if m.x == self.player_x and m.y == self.player_y:
 				return True
 
+	def next_level(self):
+		global level
+		if self.player_x == exit[0] and self.player_y == exit[1]:
+			level += 1
+			self.screen = 2
+			self.reset(2)
+
 	def run_monsters(self):
 		for m in self.monsters:
 			if m.x - self.player_x < 30 or m.y - self.player_y < 30 or m.active:
@@ -249,7 +311,7 @@ class Main:
 
 				for p in self.ping_list:
 					ping_dist = dist(m.x, m.y, self.ping_list[p][1], self.ping_list[p][2])
-					if ping_dist < (self.ping_list[p][0] / 4800) and m.target_latest < self.ping_list[p][3]:
+					if ping_dist < (self.ping_list[p][0] / 3200) and m.target_latest < self.ping_list[p][3]:
 						m.trigger(self.ping_list[p][1],self.ping_list[p][2])
 						m.target_latest = self.ping_list[p][3]
 
@@ -258,7 +320,7 @@ class Main:
 			data = np.frombuffer(self.audio_stream.read(1024),dtype=np.int16)
 
 			mx = max(data)
-			if mx > 800:
+			if mx > 800 and self.screen == 1:
 				self.made_noise = True
 				self.noise_amt = mx
 
@@ -272,8 +334,8 @@ class Main:
 			self.ping_list[self.noise_amt] = [0, self.player_x, self.player_y, time.time()]
 
 		for x in self.ping_list:
-			pyxel.circb(72 + 16 * (self.ping_list[x][1] - self.player_x), 72 + 16 * (self.ping_list[x][2] - self.player_y),self.ping_list[x][0]/300,13)
-			self.ping_list[x][0] += 300
+			pyxel.circb(72 + 16 * (self.ping_list[x][1] - self.player_x), 72 + 16 * (self.ping_list[x][2] - self.player_y),self.ping_list[x][0]/200,13)
+			self.ping_list[x][0] += 200
 			
 		for key in [key for key in self.ping_list if self.ping_list[key][0] > key]: del self.ping_list[key] 
 
@@ -349,12 +411,15 @@ class Main:
 			self.move = 0 if self.move == 1 else 1
 
 	def display_map(self):
+		global exit
 		for x in range(9):
 			i = x - 4
 			for y in range(9):
 				j = y - 4
-				if self.player_x + i > 99 or self.player_x + i < 0 or \
-				self.player_y + j > 99 or self.player_y + j < 0:
+				if self.player_x + i == exit[0] and self.player_y + j == exit[1]:
+					pyxel.blt(x*16,y*16,0,32,64,16,16)
+				elif self.player_x + i > map_size - 1 or self.player_x + i < 0 or \
+				self.player_y + j > map_size - 1 or self.player_y + j < 0:
 					pyxel.blt(x*16,y*16,0,16,64,16,16)
 				elif tmap[self.player_x + i][self.player_y + j]:
 					pyxel.blt(x*16,y*16,0,0,64,16,16)
@@ -382,8 +447,17 @@ class Main:
 		pyxel.tri(144,144,50,144,144,88,0)
 		pyxel.tri(144,144,88,144,144,50,0)
 
+	def reset(self, scrn_num = 0):
+		self.screen = scrn_num;
+		map_init()
+		self.monsters = []
+		self.ping_list = {}
+		self.curr_dir = 0
+		self.player_x = int(map_size / 2)
+		self.player_y = int(map_size / 2)
+
 	def update(self):
-		if pyxel.btnp(pyxel.KEY_Q) or self.check_lose():
+		if pyxel.btnp(pyxel.KEY_Q):
 			self.quit = True
 
 			self.audio_thread.join()
@@ -396,17 +470,30 @@ class Main:
 
 			pyxel.quit()
 
-		self.move_btn()
-		self.count_frame()
-		self.run_monsters()
+		if self.check_lose():
+			self.reset()
+
+		if self.screen == 0:
+			pyxel.mouse(True)
+		elif self.screen == 1:
+			self.move_btn()
+			self.count_frame()
+			self.run_monsters()
+			self.next_level()
 
 	def draw(self):
 		pyxel.cls(0)
 
-		self.display_map()
-		self.char_model()
-		self.display_monsters()
-		self.ping()
-		self.isolate_view()
+		if self.screen == 0:
+			self.home_screen()
+			self.start()
+		elif self.screen == 2:
+			self.lvl_screen()
+		else:
+			self.display_map()
+			self.char_model()
+			self.display_monsters()
+			self.ping()
+			self.isolate_view()
 
 Main()

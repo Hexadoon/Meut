@@ -131,3 +131,4 @@ dmypy.json
 
 
 *.icns
+.DS_Store
