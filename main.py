@@ -197,8 +197,8 @@ class Main:
 		pyxel.init(144, 144, caption="Meut")
 		pyxel.load("my_resource.pyxres")
 
-		self.screen = 0
-		# 0 : home, 1 : game, 2: level
+		self.screen = -1
+		# -1 : company screen, 0 : home, 1 : game, 2: level, 3: end
 
 		self.player_x = int(map_size / 2)
 		self.player_y = int(map_size / 2)
@@ -233,6 +233,8 @@ class Main:
 		self.monster_thread = Thread(target = self.run_monsters)
 		self.monster_thread.start()
 
+		pyxel.image(1).load(0, 0, "assets/hexadoon_logo.png")
+
 		pyxel.run(self.update, self.draw)
 
 	def home_screen(self):
@@ -242,8 +244,30 @@ class Main:
 
 	def start(self):
 		if pyxel.btnr(pyxel.MOUSE_LEFT_BUTTON) and (pyxel.pget(pyxel.mouse_x, pyxel.mouse_y) == 13 or pyxel.pget(pyxel.mouse_x, pyxel.mouse_y) == 6):
+			playsound("assets/switch2.mp3")
 			self.screen = 2
 			pyxel.mouse(False)
+
+	def company_card_screen(self):
+		self.frame_diff += 1
+		pyxel.cls(0)
+
+		company_text = "Hexadoon Studios LLC"
+
+		if self.frame_diff == 30:
+			playsound("assets/switch1.mp3")
+
+		if self.frame_diff == 90:
+			playsound("assets/switch2.mp3")
+
+		if self.frame_diff >= 30 and self.frame_diff <= 90:
+			pyxel.image(1).copy(32,24,1,0,0,80,80)
+			pyxel.text(32,120,company_text,7)
+
+		if self.frame_diff >= 120:
+			self.screen = 0
+			playsound("assets/switch1.mp3")
+			self.frame_diff = 0
 
 	def lvl_screen(self):
 		self.frame_diff += 1
@@ -303,6 +327,8 @@ class Main:
 			level += 1
 			self.screen = 2
 			self.reset(2)
+
+#	def animate_end(self):
 
 	def run_monsters(self):
 		for m in self.monsters:
@@ -471,7 +497,7 @@ class Main:
 			pyxel.quit()
 
 		if self.check_lose():
-			self.reset()
+			self.reset(3)
 
 		if self.screen == 0:
 			pyxel.mouse(True)
@@ -484,11 +510,15 @@ class Main:
 	def draw(self):
 		pyxel.cls(0)
 
-		if self.screen == 0:
+		if self.screen == -1:
+			self.company_card_screen()
+		elif self.screen == 0:
 			self.home_screen()
 			self.start()
 		elif self.screen == 2:
 			self.lvl_screen()
+		# elif self.screen == 3:
+		# 	self.animate_end()
 		else:
 			self.display_map()
 			self.char_model()
