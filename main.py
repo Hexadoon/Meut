@@ -497,7 +497,7 @@ class Main:
 			pyxel.quit()
 
 		if self.check_lose():
-			self.reset(3)
+			self.reset()
 
 		if self.screen == 0:
 			pyxel.mouse(True)
