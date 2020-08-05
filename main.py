@@ -38,7 +38,8 @@ def map_init():
 
 	for i in range(map_size - 4):
 		for j in range(map_size - 4):
-			if not tmap[i+2][j+2] and \ # removes some walls that create unreachable spaces
+			# removes some walls that create unreachable spaces
+			if not tmap[i+2][j+2] and \
 			tmap[i+1][j+2] and \
 			tmap[i+2][j+1] and \
 			tmap[i+3][j+2] and \
