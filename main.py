@@ -195,7 +195,7 @@ class Main:
 
 	def __init__(self):
 
-		pyxel.init(144, 144, caption="Meut") # screen + title
+		pyxel.init(144, 144, caption="Meut", quit_key=0) # screen + title, remove default quit key
 		pyxel.load("my_resource.pyxres") # load pyxel assets
 
 		self.screen = -1
@@ -484,7 +484,7 @@ class Main:
 		self.player_y = int(map_size / 2)
 
 	def update(self): # pyxel update method 
-		if pyxel.btnp(pyxel.KEY_Q): # quit
+		if pyxel.btnp(pyxel.KEY_ESCAPE): # quit
 			self.quit = True
 
 			self.audio_thread.join()
