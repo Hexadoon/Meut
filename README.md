@@ -8,5 +8,5 @@ Make sure you have a working mic
  - Find the exit to proceed to the next level
 
 ## Necessary Installs
-**PortAudio**\n
+**PortAudio**<br>
 `sudo apt-get install python3-pyaudio` or `brew install portaudio`
