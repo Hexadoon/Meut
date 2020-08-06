@@ -196,7 +196,7 @@ class Main:
 	def __init__(self):
 
 		pyxel.init(144, 144, caption="Meut", quit_key=0) # screen + title, remove default quit key
-		pyxel.load("my_resource.pyxres") # load pyxel assets
+		pyxel.load("assets/my_resource.pyxres") # load pyxel assets
 
 		self.screen = -1
 		# -1 : company screen, 0 : home, 1 : game, 2: level, 3: end
