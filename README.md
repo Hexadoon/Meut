@@ -14,4 +14,4 @@ Make sure you have a working mic
 requirements.txt<br>
 `pip3 install -r requirements.txt` (preferably within a Python3 virtual environment)
 
-*Do note that requirements.txt includes Mac-specific pip installs (pyobjc)*
+*Do note that requirements.txt includes Mac-specific pip installs*(pyobjc)
