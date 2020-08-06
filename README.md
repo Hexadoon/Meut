@@ -9,4 +9,4 @@ Make sure you have a working mic
 
 ## Necessary Installs
 **PortAudio**<br>
-`sudo apt-get install python3-pyaudio` or `brew install portaudio`
+`sudo apt-get install python3-pyaudio` (to install PyAudio and PortAudio) or `brew install portaudio` (on Mac for PortAudio only)
