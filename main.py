@@ -225,11 +225,14 @@ class Main:
 		self.curr_dir = 0 # player model facing direction
 		#0 : down, 1 : left, 2 : up, 3 : right
 
-		self.audio_obj = pyaudio.PyAudio()
-		self.audio_stream = self.audio_obj.open(format=pyaudio.paInt16,channels=1,rate=12000,input=True,frames_per_buffer=1024)
-
-		self.audio_thread = Thread(target = self.listen) # start thread for microphone input
-		self.audio_thread.start()
+		self.audio_obj = pyaudio.PyAudio() # create pyaudio object
+		self.audio_opened = True
+		try:
+			self.audio_stream = self.audio_obj.open(format=pyaudio.paInt16,channels=1,rate=12000,input=True,frames_per_buffer=1024)
+			self.audio_thread = Thread(target = self.listen) # start thread for microphone input
+			self.audio_thread.start()
+		except:
+			self.audio_opened = False # pyaudio stream failed
 
 		self.monster_thread = Thread(target = self.run_monsters) # start another thread for monster manipulation
 		self.monster_thread.start()
@@ -238,10 +241,13 @@ class Main:
 
 		pyxel.run(self.update, self.draw) # start pyxel engine
 
-	def home_screen(self):
+	def home_screen(self, is_audio_opened):
 		pyxel.blt(38,40,0,0,80,64,32) # load title text
 
-		pyxel.blt(36,100,0,0,112,80,16) # load start button
+		if is_audio_opened:
+			pyxel.blt(36,100,0,0,112,80,16) # load start button
+		else:
+			pyxel.text(36,100,"Mic access failed",7)
 
 	def start(self): # check for start button click
 		if pyxel.btnr(pyxel.MOUSE_LEFT_BUTTON) and (pyxel.pget(pyxel.mouse_x, pyxel.mouse_y) == 13 or pyxel.pget(pyxel.mouse_x, pyxel.mouse_y) == 6):
@@ -487,11 +493,12 @@ class Main:
 		if pyxel.btnp(pyxel.KEY_ESCAPE): # quit
 			self.quit = True
 
-			self.audio_thread.join()
+			if self.audio_opened:
+				self.audio_thread.join()
 
-			self.audio_stream.stop_stream()
-			self.audio_stream.close()
-			self.audio_obj.terminate()
+				self.audio_stream.stop_stream()
+				self.audio_stream.close()
+				self.audio_obj.terminate()
 
 			self.monster_thread.join()
 
@@ -514,7 +521,7 @@ class Main:
 		if self.screen == -1:
 			self.company_card_screen()
 		elif self.screen == 0:
-			self.home_screen()
+			self.home_screen(self.audio_opened)
 			self.start()
 		elif self.screen == 2:
 			self.lvl_screen()
