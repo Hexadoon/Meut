@@ -498,7 +498,8 @@ class Main:
 
 				self.audio_stream.stop_stream()
 				self.audio_stream.close()
-				self.audio_obj.terminate()
+			
+			self.audio_obj.terminate()
 
 			self.monster_thread.join()
 
