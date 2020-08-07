@@ -1,5 +1,5 @@
 # Meut
-Horror Rogue with Microphone Interaction
+Horror Rogue with Microphone Interaction<br>
 [![Requirements Status](https://requires.io/github/Hexadoon/Meut/requirements.svg?branch=master)](https://requires.io/github/Hexadoon/Meut/requirements/?branch=master)
 
 ## How to Play
