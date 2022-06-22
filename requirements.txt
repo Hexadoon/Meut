@@ -1,6 +1,6 @@
 altgraph==0.17
 macholib==1.14
-numpy==1.19.1
+numpy==1.22.0
 playsound==1.2.2
 PyAudio==0.2.11
 PyInstaller==3.6
