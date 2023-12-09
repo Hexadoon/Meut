@@ -3,7 +3,7 @@ macholib==1.14
 numpy==1.19.1
 playsound==1.2.2
 PyAudio==0.2.11
-PyInstaller==3.6
+PyInstaller==5.13.1
 
 # any pyobjc requirements are not necessary for platforms other than mac
 
